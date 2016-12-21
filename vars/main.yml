@@ -1,0 +1,4 @@
+---
+home: "{{ ansible_env.HOME }}"
+dotfiles_repo: https://github.com/danielmellado/rcfiles.git
+powerline_repo: https://github.com/powerline/fonts.git

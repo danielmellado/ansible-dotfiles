@@ -1,0 +1,64 @@
+---
+- name: ensure github.com is a known host
+  lineinfile:
+      dest: ~/.ssh/known_hosts
+      create: yes
+      state: present
+      line: "{{ lookup('pipe', 'ssh-keyscan -t rsa github.com') }}"
+      regexp: "^github\\.com"
+
+- name: Update system
+  dnf: name=* state=latest
+  become: true
+
+- name: install dnf prerequisites
+  dnf: name={{item}} state=latest
+  with_items:
+      - vim
+      - git
+      - tmux
+      - python-pip
+      - python2-virtualenvwrapper
+      - git-review
+      - ctags
+  become: true
+
+- name: clone dotfiles
+  git: accept_hostkey=yes
+       repo={{ dotfiles_repo }}
+       recursive=yes
+       track_submodules=yes
+       dest={{ home }}/.dotfiles
+       version=vundle
+
+- name: symlink dotfiles
+  file: src={{ home }}/.dotfiles/.{{ item }}
+        dest={{ home }}/.{{ item }}
+        force=yes
+        state=link
+  with_items:
+      - bashrc
+      - gitconfig
+      - gitignore
+      - tmux.conf
+      - tmux_line.conf
+      - vim
+      - vimrc
+
+- name: install vundle plugins
+  shell: "echo | echo | vim +PluginInstall +qall &>/dev/null"
+
+- name: create temporary dir for powerline fonts
+  tempfile:
+      state: directory
+      suffix: build
+  register: tmpdir
+
+- name: clone powerline fonts repo
+  git: repo={{ powerline_repo }}
+       dest=tmpdir
+
+- name: install powerline fonts
+  command: "./install.sh"
+  args:
+      chdir: /tmp/fonts
